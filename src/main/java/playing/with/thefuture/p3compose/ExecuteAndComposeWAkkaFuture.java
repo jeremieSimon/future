@@ -19,9 +19,14 @@ import akka.dispatch.ExecutionContexts;
 import akka.dispatch.Mapper;
 import akka.util.Timeout;
 
+import com.google.common.collect.Lists;
+
 /**
  * Now, let's see how we can add some extra logic without blocking. Akka future are more composable,
  * and we can pipe operations to it. Here we just try to negate the values and filter the odd ones
+ * It's good for single future but not so good when we're dealing with collection of futures. When
+ * we apply any transformation we need to do something like futures.map(f -> f.map(someFunction))
+ * instead of simply having futures.map(someFunction)
  */
 public class ExecuteAndComposeWAkkaFuture {
 
@@ -40,7 +45,19 @@ public class ExecuteAndComposeWAkkaFuture {
             });
         }
 
+        List<Integer> is = Lists.newArrayList(1, 2, 3);
+        List<Integer> isPlus1 = is.stream().map(i -> i + 1)
+            .collect(Collectors.toList());
+        System.out.println(isPlus1);
+
         List<Future<Integer>> futures = executeTask(execContext, tasks);
+        futures.stream().map(f -> f.map(new Mapper<Integer, Integer>() {
+            @Override
+            public Integer apply(Integer i) {
+                return i + 1;
+            }
+        }, execContext));
+
         List<Future<Integer>> asNegVals = futures.stream()
             .map(f -> f.map(new Mapper<Integer, Integer>() {
                 @Override
